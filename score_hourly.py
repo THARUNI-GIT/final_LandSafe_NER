@@ -104,7 +104,7 @@ def _batched_fetch(coords_list, fetch_fn, label):
     result = {}
     for i in range(0, len(coords_list), BATCH_SIZE):
         batch = coords_list[i:i + BATCH_SIZE]
-        for attempt in range(3):
+        for attempt in range(4):
             try:
                 result.update(fetch_fn(batch))
                 break
@@ -114,8 +114,17 @@ def _batched_fetch(coords_list, fetch_fn, label):
                     print(f"  [{label}] rate limited, waiting {wait}s...")
                     time.sleep(wait)
                 else:
-                    print(f"  [{label}] batch {i} failed: {e}")
-                    break
+                    print(f"  [{label}] batch {i} failed (HTTP error): {e}")
+                    if attempt < 3:
+                        time.sleep(5 * (attempt + 1))
+                    else:
+                        break
+            except (requests.exceptions.Timeout, requests.exceptions.ConnectionError) as e:
+                # Plain network hiccups (slow response, dropped connection) — retry these too,
+                # not just rate-limit errors. A single slow request used to crash the whole run.
+                wait = 5 * (attempt + 1)
+                print(f"  [{label}] batch {i} network error ({type(e).__name__}), retrying in {wait}s...")
+                time.sleep(wait)
         time.sleep(1)
     print(f"  [{label}] {len(result)}/{len(coords_list)} cells fetched")
     return result
@@ -132,7 +141,7 @@ def fetch_daily_batch(coords, days_back=30):
             "past_days": days_back, "forecast_days": 1,
             "timezone": "Asia/Kolkata",
         },
-        timeout=30,
+        timeout=60,
     )
     r.raise_for_status()
     data = r.json()
@@ -153,7 +162,7 @@ def fetch_hourly_batch(coords, past_days=3, forecast_hours=24):
             "past_days": past_days, "forecast_hours": forecast_hours,
             "timezone": "Asia/Kolkata",
         },
-        timeout=30,
+        timeout=60,
     )
     r.raise_for_status()
     data = r.json()

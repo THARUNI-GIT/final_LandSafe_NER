@@ -24,5 +24,6 @@ jobs:
       - name: Run scoring script
         env:
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          DATA_DIR: '.'
         run: |
           python score_hourly.py

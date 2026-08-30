@@ -19,7 +19,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install pandas numpy joblib requests shap lightgbm sqlalchemy psycopg2-binary
+           pip install pandas numpy joblib requests shap lightgbm sqlalchemy psycopg2-binary pyarrow
 
       - name: Run scoring script
         env:
